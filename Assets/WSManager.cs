@@ -11,7 +11,7 @@ public class WSManager : MonoBehaviour
 {
     SocketIO ws;
     TextMeshProUGUI testText;
-    TextMeshProUGUI playerList;
+    TextMeshProUGUI playerListUI;
 
     string roomCode;
 
@@ -20,13 +20,17 @@ public class WSManager : MonoBehaviour
 
     object playerListLock = new object();
     string playerListString = "";
+
+    List<PlayerInfo> playerList;
+
     bool updatePlayerListFlag = false;
     // Start is called before the first frame update
     private void Start()
     {
         var canvas = GameObject.Find("Canvas");
         testText = GameObject.Find("test text").GetComponent<TextMeshProUGUI>();
-        playerList = GameObject.Find("Player List").GetComponent<TextMeshProUGUI>();
+        playerListUI = GameObject.Find("Player List").GetComponent<TextMeshProUGUI>();
+        playerList = new List<PlayerInfo>();
         // Creating object of random class
         System.Random rand = new System.Random();
 
@@ -91,6 +95,7 @@ public class WSManager : MonoBehaviour
             lock (playerListLock)
             {
                 playerListString += $"{client_name}\n";
+                playerList.Add(new PlayerInfo(client_name));
                 updatePlayerListFlag = true;
             }
         });
@@ -103,13 +108,13 @@ public class WSManager : MonoBehaviour
 
     void Update(){
         if(Input.GetKeyDown(KeyCode.Space)){
-            ws.EmitAsync("insert_html");
+            ws.EmitAsync("host_notify",playerList[0].Name);
         }
 
         if (updatePlayerListFlag)
         {
             updatePlayerListFlag = false;
-            playerList.SetText(playerListString);
+            playerListUI.SetText(playerListString);
         }
     }
 
