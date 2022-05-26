@@ -12,25 +12,21 @@ public class WSManager : MonoBehaviour
     SocketIO ws;
     TextMeshProUGUI testText;
     TextMeshProUGUI playerListUI;
+    TextMeshProUGUI hostNameUI;
 
     string roomCode;
 
-    string updateText = "";
-    bool updateTextFlag = false;
-
-    object playerListLock = new object();
     string playerListString = "";
 
-    List<PlayerInfo> playerList;
-
     bool updatePlayerListFlag = false;
+    bool updateHostFlag = false;
     // Start is called before the first frame update
     private void Start()
     {
         var canvas = GameObject.Find("Canvas");
         testText = GameObject.Find("test text").GetComponent<TextMeshProUGUI>();
         playerListUI = GameObject.Find("Player List").GetComponent<TextMeshProUGUI>();
-        playerList = new List<PlayerInfo>();
+        hostNameUI = GameObject.Find("Host Text").GetComponent<TextMeshProUGUI>();
         // Creating object of random class
         System.Random rand = new System.Random();
 
@@ -92,11 +88,31 @@ public class WSManager : MonoBehaviour
             Debug.Log(data);
             var client_name = data.GetValue<string>(0);
             var room_code = data.GetValue<string>(1);
-            lock (playerListLock)
+            if (GameManager.Instance.AddPlayer(client_name))
             {
                 playerListString += $"{client_name}\n";
-                playerList.Add(new PlayerInfo(client_name));
                 updatePlayerListFlag = true;
+            }
+        });
+
+
+
+        ws.On("join_room_host", data =>
+        {
+            Debug.Log(data);
+            var host_name = data.GetValue<string>(0);
+            var room_code = data.GetValue<string>(1);
+
+            if (GameManager.Instance.SetHost(host_name))
+            {
+                Debug.Log("Host Success");
+                ws.EmitAsync("join_success_host", host_name);
+                updateHostFlag = true;
+            }
+            else
+            {
+                Debug.Log("Host taken");
+                ws.EmitAsync("join_host_taken", host_name);
             }
         });
 
@@ -107,14 +123,16 @@ public class WSManager : MonoBehaviour
     }
 
     void Update(){
-        if(Input.GetKeyDown(KeyCode.Space)){
-            ws.EmitAsync("host_notify",playerList[0].Name);
-        }
 
         if (updatePlayerListFlag)
         {
             updatePlayerListFlag = false;
             playerListUI.SetText(playerListString);
+        }
+        if (updateHostFlag)
+        {
+            updateHostFlag = false;
+            hostNameUI.SetText("Hosted by " + GameManager.Instance.Host) ;
         }
     }
 
