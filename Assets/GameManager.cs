@@ -2,24 +2,49 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using Newtonsoft.Json;
 using System.IO;
+using FlippardyExceptions;
 
 public class GameManager : MonoBehaviour
 {
     public static GameManager Instance;
+
+    private Game activeGame;
+
+    private int boardIndex = 0;
+    private bool initialized = false;
 
     List<PlayerInfo> playerList;
     string host = "";
     object playerListLock = new object();
     object hostLock = new object();
 
+    private bool debugMode = false;
+
+    private bool startGameFlag;
+
 
     public List<PlayerInfo> PlayerList => playerList;
     public string Host => host;
+    public bool DebugMode => debugMode;
+    public Game ActiveGame => activeGame;
+    public int BoardIndex
+    {
+        get
+        {
+            return boardIndex;
+        }
+        set
+        {
+            boardIndex = value;
+        }
+    }
     void Start()
     {
         Instance = this;
+        DontDestroyOnLoad(this.gameObject);
         playerList = new List<PlayerInfo>();
     }
 
@@ -32,7 +57,7 @@ public class GameManager : MonoBehaviour
             debugString += $"Host: {host}\nPlayers:\n";
             foreach (var player in playerList)
             {
-                debugString += $"{player.Name} :${player.Money}";
+                debugString += $"{player.Name} :${player.Money}\n";
             }
             Debug.Log(debugString);
         }
@@ -42,6 +67,38 @@ public class GameManager : MonoBehaviour
             var json = JsonConvert.SerializeObject(game,Formatting.Indented);
             File.WriteAllText("C:\\Temp\\Foo.json", json);
         }
+
+        if (startGameFlag)
+        {
+            startGameFlag = false;
+            StartCoroutine(GameBeginRoutine());
+        }
+    }
+
+    private IEnumerator GameBeginRoutine()
+    {
+        if (debugMode)
+        {
+            DebugInit();
+        }
+        else
+        {
+            throw new MissingPlayerControlException();
+        }
+        initialized = true;
+        SceneManager.LoadScene("Board");
+        yield return null;
+    }
+
+    public void DebugInit()
+    {
+        for(var i=0; i<4; i++)
+        {
+            playerList.Add(new PlayerInfo($"Player {i + 1}"));
+        }
+        host = "Debug Host";
+        activeGame = Game.GenerateTestGame();
+        boardIndex = 0;
     }
 
     public bool AddPlayer(string name)
@@ -75,5 +132,16 @@ public class GameManager : MonoBehaviour
                 return false;
             }
         }
+    }
+
+    public void StartDebugGame()
+    {
+        debugMode = true;
+        StartGame();
+    }
+
+    public void StartGame()
+    {
+        startGameFlag = true;
     }
 }

@@ -4,6 +4,5 @@ using UnityEngine;
 
 public struct Board
 {
-    public int ValueMultiplier;
     public List<Category> Categories;
 }

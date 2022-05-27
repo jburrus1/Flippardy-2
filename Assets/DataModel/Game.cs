@@ -14,94 +14,30 @@ public struct Game
 
     public static Game GenerateTestGame()
     {
-        var game = new Game
-        {
-            Boards = new List<Board>
-            {
-                new Board
-                {
-                    Categories = new List<Category>
-                    {
-                        new Category
-                        {
-                            Name = "Cat1",
-                            Questions = new List<Question>
-                            {
-                                new Question
-                                {
-                                    Value = 100,
-                                    Text = "Q1"
-                                },
-                                new Question
-                                {
-                                    Value = 200,
-                                    Text = "Q2"
-                                }
-                            }
-                        },
-                        new Category
-                        {
-                            Name = "Cat2",
-                            Questions = new List<Question>
-                            {
-                                new Question
-                                {
-                                    Value = 100,
-                                    Text = "Q1"
-                                },
-                                new Question
-                                {
-                                    Value = 200,
-                                    Text = "Q2"
-                                }
-                            }
-                        }
-                    }
-                },
-                new Board
-                {
-                    Categories = new List<Category>
-                    {
-                        new Category
-                        {
-                            Name = "Cat1",
-                            Questions = new List<Question>
-                            {
-                                new Question
-                                {
-                                    Value = 100,
-                                    Text = "Q1"
-                                },
-                                new Question
-                                {
-                                    Value = 200,
-                                    Text = "Q2"
-                                }
-                            }
-                        },
-                        new Category
-                        {
-                            Name = "Cat2",
-                            Questions = new List<Question>
-                            {
-                                new Question
-                                {
-                                    Value = 100,
-                                    Text = "Q1"
-                                },
-                                new Question
-                                {
-                                    Value = 200,
-                                    Text = "Q2"
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-            FinalFlippardy = ("Final Cat", "Final Q")
-        };
+        var numBoards = 2;
+        var numCats = 2;
+        var numQs = 2;
 
-        return game;
+        var boardList = new List<Board>();
+        for(var boardIndex=0; boardIndex < numBoards; boardIndex++)
+        {
+            var catList = new List<Category>();
+            for(var catIndex=0; catIndex < numCats; catIndex++)
+            {
+                var qList = new List<Question>();
+                for(var qIndex=0; qIndex < numQs; qIndex++)
+                {
+                    qList.Add(new Question
+                    {
+                        Value = (qIndex + 1) * 200 * (boardIndex + 1),
+                        Text = $"Board {boardIndex+1} Cat {catIndex+1} Question {qIndex + 1}"
+                    });
+                }
+                catList.Add(new Category { Name = $"Board {boardIndex + 1} Cat {catIndex + 1}", Questions = qList });
+            }
+            boardList.Add(new Board { Categories = catList });
+        }
+
+        return new Game { Boards = boardList, FinalFlippardy = ("Final Cat", "Final Q") };
     }
 }
