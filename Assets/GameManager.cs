@@ -25,11 +25,24 @@ public class GameManager : MonoBehaviour
 
     private bool startGameFlag;
 
+    private string roomCode = "";
+
 
     public List<PlayerInfo> PlayerList => playerList;
     public string Host => host;
     public bool DebugMode => debugMode;
     public Game ActiveGame => activeGame;
+    public string RoomCode
+    {
+        get
+        {
+            return roomCode;
+        }
+        set
+        {
+            roomCode = value;
+        }
+    }
     public int BoardIndex
     {
         get
@@ -45,6 +58,7 @@ public class GameManager : MonoBehaviour
     {
         Instance = this;
         DontDestroyOnLoad(this.gameObject);
+        activeGame = Game.GenerateTestGame();
         playerList = new List<PlayerInfo>();
     }
 
@@ -83,7 +97,7 @@ public class GameManager : MonoBehaviour
         }
         else
         {
-            throw new MissingPlayerControlException();
+            // Setup for player control
         }
         initialized = true;
         SceneManager.LoadScene("Board");
@@ -92,7 +106,7 @@ public class GameManager : MonoBehaviour
 
     public void DebugInit()
     {
-        for(var i=0; i<4; i++)
+        for(var i=0; i<3; i++)
         {
             playerList.Add(new PlayerInfo($"Player {i + 1}"));
         }

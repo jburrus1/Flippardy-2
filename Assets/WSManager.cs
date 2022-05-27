@@ -6,6 +6,7 @@ using SocketIOClient;
 using System.Net.WebSockets;
 using UnityEngine;
 using TMPro;
+using System.Linq;
 
 public class WSManager : MonoBehaviour
 {
@@ -52,10 +53,13 @@ public class WSManager : MonoBehaviour
 
         roomCode = str;
 
+        GameManager.Instance.RoomCode = roomCode;
+
         testText.SetText($"Room code: {roomCode}");
     }
     private async void Awake()
     {
+        DontDestroyOnLoad(this.gameObject);
         var url = new Uri("https://flippardy.glitch.me");
         ws = new SocketIO(url, new SocketIOOptions()
         {
@@ -118,6 +122,38 @@ public class WSManager : MonoBehaviour
 
         ws.On("client", action =>{
             Debug.Log("Received!");
+        });
+
+        ws.On("select_question", data =>
+        {
+            var cat = data.GetValue<int>(0);
+            var q = data.GetValue<int>(1);
+
+            BoardManager.Instance.SelectQuestion(cat, q);
+
+        });
+
+
+        ws.On("start_game", action => {
+            if(GameManager.Instance.PlayerList.Count > 0)
+            {
+                foreach(var player in GameManager.Instance.PlayerList)
+                {
+                    ws.EmitAsync("start_game_player", GameManager.Instance.RoomCode,player.Name, player.Money.ToString());
+                }
+                var startBoard = GameManager.Instance.ActiveGame.Boards[0];
+
+
+                var catArr = startBoard.Categories.Select(x => x.Name).ToArray();
+                var numCats = catArr.Length;
+                var numQs = startBoard.Categories[0].Questions.Count;
+                var baseValue = startBoard.BaseValue;
+                var active = new BitArray(numCats * numQs, true);
+
+
+                ws.EmitAsync("start_game_host", GameManager.Instance.RoomCode,catArr, numCats, numQs, baseValue, active);
+                GameManager.Instance.StartGame();
+            }
         });
         await ws.ConnectAsync();
     }

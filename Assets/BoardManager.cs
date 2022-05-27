@@ -6,6 +6,8 @@ using UnityEngine.SceneManagement;
 
 public class BoardManager : MonoBehaviour
 {
+    public static BoardManager Instance;
+
     const float width = 1920;
     const float height = 1080;
 
@@ -20,11 +22,17 @@ public class BoardManager : MonoBehaviour
 
     Transform gridTransform;
     Transform playerTransform;
-
-    Vector2Int activeQuestion;
     GameObject activeQuestionDisplay;
 
-    bool isShowingQuestion;
+
+    //Flags
+    bool hostSelectFlag = false;
+    Vector2Int hostSelectedQ;
+
+    bool hostActivateQFlag = false;
+
+    bool playerAnswerQFlag = false;
+    string playerAnswerName = "";
 
 
     float gridCellHeight;
@@ -33,6 +41,7 @@ public class BoardManager : MonoBehaviour
     Board board;
     void Start()
     {
+        Instance = this;
         board = GameManager.Instance.ActiveGame.Boards[GameManager.Instance.BoardIndex];
         gridElementPrefab = Resources.Load<GameObject>("Prefabs/GridElement");
         questionElementPrefab = Resources.Load<GameObject>("Prefabs/QuestionElement");
@@ -108,8 +117,6 @@ public class BoardManager : MonoBehaviour
         }
         else
         {
-            isShowingQuestion = true;
-            activeQuestion = new Vector2Int(catIndex, qIndex);
             var question = board.Categories[catIndex].Questions[qIndex];
             var qObj = Instantiate(questionElementPrefab);
             activeQuestionDisplay = qObj;
@@ -126,7 +133,7 @@ public class BoardManager : MonoBehaviour
             var targetPos = new Vector2(0, 0);
             var targetScale = new Vector2(1, 1);
 
-            var lerpDuration = 1f;
+            var lerpDuration = 0.5f;
             var timeElapsed = 0f;
 
 
@@ -142,15 +149,43 @@ public class BoardManager : MonoBehaviour
             playerRect.localScale = targetScale;
 
 
+            var isWaitingForHost = true;
+
+            while (isWaitingForHost)
+            {
+                if (Input.GetMouseButtonDown(0) && GameManager.Instance.DebugMode)
+                {
+                    isWaitingForHost = false;
+                }
+                //TODO: include support for host activate
+                if (hostActivateQFlag)
+                {
+                    isWaitingForHost = false;
+                    hostActivateQFlag = false;
+                }
+                yield return null;
+            }
+
+            if (!GameManager.Instance.DebugMode)
+            {
+                var waitingForPlayers = true;
+                while (waitingForPlayers)
+                {
+
+                    yield return null;
+                }
+            }
+
+
+            RemoveQuestion(catIndex, qIndex);
+
+
         }
         yield return null;
     }
 
-    private void RemoveQuestion()
+    private void RemoveQuestion(int cat, int q)
     {
-        isShowingQuestion = false;
-        var cat = activeQuestion.x;
-        var q = activeQuestion.y;
         var questionObj = questions[cat][q];
         questions[cat][q] = null;
         Destroy(questionObj);
@@ -172,6 +207,23 @@ public class BoardManager : MonoBehaviour
                     break;
                 }
             }
+            if (Input.GetMouseButtonDown(0) && GameManager.Instance.DebugMode)
+            {
+                var gridX = Mathf.FloorToInt(Input.mousePosition.x / gridCellWidth);
+                var gridY = board.Categories[0].Questions.Count + 2 - Mathf.CeilToInt(Input.mousePosition.y / gridCellHeight);
+
+                if ((gridY > 0) && (gridY < board.Categories[0].Questions.Count + 1))
+                {
+                    Debug.Log($"{gridX},{gridY - 1}");
+                    yield return HandleQuestion(gridX, gridY - 1);
+                }
+            }
+            //TODO: include support for player input
+            if (hostSelectFlag)
+            {
+                hostSelectFlag = false;
+                yield return HandleQuestion(hostSelectedQ.x,hostSelectedQ.y);
+            }
             yield return null;
         }
 
@@ -187,24 +239,17 @@ public class BoardManager : MonoBehaviour
         yield return null;
     }
 
+    public void SelectQuestion(int cat, int q)
+    {
+        hostSelectedQ = new Vector2Int(cat, q);
+        hostSelectFlag = true;
+
+        Debug.Log($"Host selected {cat},{q}");
+    }
+
     // Update is called once per frame
     void Update()
     {
-        if (Input.GetMouseButtonDown(0) && GameManager.Instance.DebugMode && !isShowingQuestion)
-        {
-            var gridX = Mathf.FloorToInt(Input.mousePosition.x / gridCellWidth);
-            var gridY = board.Categories[0].Questions.Count + 2 - Mathf.CeilToInt(Input.mousePosition.y / gridCellHeight);
-
-            if ((gridY > 0) && (gridY < board.Categories[0].Questions.Count + 2))
-            {
-                Debug.Log($"{gridX},{gridY - 1}");
-                StartCoroutine(HandleQuestion(gridX, gridY - 1));
-            }
-        }
-        else if (Input.GetMouseButtonDown(0) && GameManager.Instance.DebugMode && isShowingQuestion)
-        {
-            RemoveQuestion();
-        }
         
     }
 }

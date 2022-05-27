@@ -14,7 +14,7 @@ public struct Game
 
     public static Game GenerateTestGame()
     {
-        var numBoards = 2;
+        var numBoards = 1;
         var numCats = 2;
         var numQs = 2;
 
@@ -35,7 +35,7 @@ public struct Game
                 }
                 catList.Add(new Category { Name = $"Board {boardIndex + 1} Cat {catIndex + 1}", Questions = qList });
             }
-            boardList.Add(new Board { Categories = catList });
+            boardList.Add(new Board { Categories = catList, BaseValue = 200*(boardIndex+1)});
         }
 
         return new Game { Boards = boardList, FinalFlippardy = ("Final Cat", "Final Q") };

@@ -5,4 +5,5 @@ using UnityEngine;
 public struct Board
 {
     public List<Category> Categories;
+    public int BaseValue;
 }
