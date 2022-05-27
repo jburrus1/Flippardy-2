@@ -10,6 +10,8 @@ using System.Linq;
 
 public class WSManager : MonoBehaviour
 {
+    public static WSManager Instance;
+
     SocketIO ws;
     TextMeshProUGUI testText;
     TextMeshProUGUI playerListUI;
@@ -59,6 +61,7 @@ public class WSManager : MonoBehaviour
     }
     private async void Awake()
     {
+        Instance = this;
         DontDestroyOnLoad(this.gameObject);
         var url = new Uri("https://flippardy.glitch.me");
         ws = new SocketIO(url, new SocketIOOptions()
@@ -133,6 +136,32 @@ public class WSManager : MonoBehaviour
 
         });
 
+        ws.On("activate_question", data =>
+        {
+            Debug.Log("Activating Question");
+            BoardManager.Instance.ActivateQuestion();
+        });
+
+        ws.On("cancel_question", data =>
+        {
+            Debug.Log("Canceling Question");
+            BoardManager.Instance.CancelQuestion();
+        });
+
+        ws.On("buzz_in", data =>
+        {
+            var playerName = data.GetValue<string>(0);
+            Debug.Log($"{playerName} buzzed in");
+            BoardManager.Instance.BuzzIn(playerName);
+        });
+
+        ws.On("host_decision", data =>
+        {
+            var decision = data.GetValue<bool>(0);
+            Debug.Log($"Host Decided {decision}");
+            BoardManager.Instance.HostDecision(decision);
+        });
+
 
         ws.On("start_game", action => {
             if(GameManager.Instance.PlayerList.Count > 0)
@@ -156,6 +185,56 @@ public class WSManager : MonoBehaviour
             }
         });
         await ws.ConnectAsync();
+    }
+
+    public void SetPlayerInfo()
+    {
+        Debug.Log("setting player info");
+        foreach(var player in GameManager.Instance.PlayerList)
+        {
+            Debug.Log($"{player.Name}, {player.Money}, {player.CanAnswer}");
+            ws.EmitAsync("set_player_info", GameManager.Instance.RoomCode, player.Name, player.Money, player.CanAnswer);
+        }
+    }
+
+    public void DisableBuzzers()
+    {
+        foreach (var player in GameManager.Instance.PlayerList)
+        {
+            ws.EmitAsync("set_player_info", GameManager.Instance.RoomCode, player.Name, player.Money, false);
+        }
+    }
+
+    public void ActivateSpeakMode()
+    {
+        ws.EmitAsync("speak_mode", GameManager.Instance.RoomCode);
+    }
+
+    public void ActivateQuesitonSelectMode()
+    {
+        var board = BoardManager.Instance.Board;
+        var catArr = board.Categories.Select(x => x.Name).ToArray();
+        var numCats = catArr.Length;
+        var numQs = board.Categories[0].Questions.Count;
+        var baseValue = board.BaseValue;
+
+        var activeList = new List<bool>();
+
+        for(var i=0; i< numCats; i++)
+        {
+            for(var j=0; j< numQs; j++)
+            {
+                activeList.Add(!(BoardManager.Instance.Questions[i][j] is null));
+            }
+        }
+
+        var active = new BitArray(activeList.ToArray());
+        ws.EmitAsync("start_game_host", GameManager.Instance.RoomCode, catArr, numCats, numQs, baseValue, activeList.ToArray());
+    }
+
+    public void ActivateDecisionMode()
+    {
+        ws.EmitAsync("decision_mode", GameManager.Instance.RoomCode);
     }
 
     void Update(){

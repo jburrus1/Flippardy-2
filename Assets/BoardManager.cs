@@ -31,14 +31,26 @@ public class BoardManager : MonoBehaviour
 
     bool hostActivateQFlag = false;
 
-    bool playerAnswerQFlag = false;
-    string playerAnswerName = "";
+    bool buzzInFlag = false;
+    string buzzInName = "";
+
+    bool hostDecisionFlag = false;
+    bool hostDecision = false;
+
+    bool hostCancelQFlag = false;
+
+
+
+    object buzzInLock = new object();
 
 
     float gridCellHeight;
     float gridCellWidth;
 
     Board board;
+
+    public Board Board => board;
+    public List<List<GameObject>> Questions => questions;
     void Start()
     {
         Instance = this;
@@ -117,6 +129,10 @@ public class BoardManager : MonoBehaviour
         }
         else
         {
+            foreach(var player in GameManager.Instance.PlayerList)
+            {
+                player.SetCanAnswer(true);
+            }
             var question = board.Categories[catIndex].Questions[qIndex];
             var qObj = Instantiate(questionElementPrefab);
             activeQuestionDisplay = qObj;
@@ -148,6 +164,8 @@ public class BoardManager : MonoBehaviour
             playerRect.anchoredPosition = targetPos;
             playerRect.localScale = targetScale;
 
+            WSManager.Instance.ActivateSpeakMode();
+
 
             var isWaitingForHost = true;
 
@@ -157,11 +175,11 @@ public class BoardManager : MonoBehaviour
                 {
                     isWaitingForHost = false;
                 }
-                //TODO: include support for host activate
                 if (hostActivateQFlag)
                 {
                     isWaitingForHost = false;
                     hostActivateQFlag = false;
+                    WSManager.Instance.SetPlayerInfo();
                 }
                 yield return null;
             }
@@ -171,6 +189,39 @@ public class BoardManager : MonoBehaviour
                 var waitingForPlayers = true;
                 while (waitingForPlayers)
                 {
+                    if (buzzInFlag)
+                    {
+                        buzzInFlag = false;
+
+                        WSManager.Instance.DisableBuzzers();
+                        WSManager.Instance.ActivateDecisionMode();
+
+                        var waitingForHostDecision = true;
+                        while (waitingForHostDecision)
+                        {
+                            if (hostDecisionFlag)
+                            {
+                                hostDecisionFlag = false;
+                                waitingForHostDecision = false;
+                                if (hostDecision)
+                                {
+                                    AwardPlayer(buzzInName, question.Value);
+                                    waitingForPlayers = false;
+                                }
+                                else
+                                {
+                                    AwardPlayer(buzzInName, -question.Value);
+                                }
+                                WSManager.Instance.SetPlayerInfo();
+                            }
+                            yield return null;
+                        }
+                    }
+                    if (hostCancelQFlag)
+                    {
+                        hostCancelQFlag = false;
+                        waitingForPlayers = false;
+                    }
 
                     yield return null;
                 }
@@ -179,9 +230,18 @@ public class BoardManager : MonoBehaviour
 
             RemoveQuestion(catIndex, qIndex);
 
+            WSManager.Instance.ActivateQuesitonSelectMode();
+
 
         }
         yield return null;
+    }
+
+    private void AwardPlayer(string playerName, int value)
+    {
+        var player = GameManager.Instance.PlayerList.First(x => x.Name.Equals(playerName));
+        player.AddMoney(value);
+        player.SetCanAnswer(false);
     }
 
     private void RemoveQuestion(int cat, int q)
@@ -245,6 +305,31 @@ public class BoardManager : MonoBehaviour
         hostSelectFlag = true;
 
         Debug.Log($"Host selected {cat},{q}");
+    }
+
+    public void ActivateQuestion()
+    {
+        hostActivateQFlag = true;
+    }
+
+    public void CancelQuestion()
+    {
+        hostCancelQFlag = true;
+    }
+
+    public void BuzzIn(string playerName)
+    {
+        lock (buzzInLock)
+        {
+            buzzInFlag = true;
+            buzzInName = playerName;
+        }
+    }
+
+    public void HostDecision(bool decision)
+    {
+        hostDecisionFlag = true;
+        hostDecision = decision;
     }
 
     // Update is called once per frame
