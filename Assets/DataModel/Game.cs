@@ -14,7 +14,7 @@ public struct Game
 
     public static Game GenerateTestGame()
     {
-        var numBoards = 1;
+        var numBoards = 2;
         var numCats = 2;
         var numQs = 2;
 

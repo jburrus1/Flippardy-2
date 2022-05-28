@@ -171,16 +171,6 @@ public class WSManager : MonoBehaviour
                     ws.EmitAsync("start_game_player", GameManager.Instance.RoomCode,player.Name, player.Money.ToString());
                 }
                 var startBoard = GameManager.Instance.ActiveGame.Boards[0];
-
-
-                var catArr = startBoard.Categories.Select(x => x.Name).ToArray();
-                var numCats = catArr.Length;
-                var numQs = startBoard.Categories[0].Questions.Count;
-                var baseValue = startBoard.BaseValue;
-                var active = new BitArray(numCats * numQs, true);
-
-
-                ws.EmitAsync("start_game_host", GameManager.Instance.RoomCode,catArr, numCats, numQs, baseValue, active);
                 GameManager.Instance.StartGame();
             }
         });
@@ -218,17 +208,15 @@ public class WSManager : MonoBehaviour
         var numQs = board.Categories[0].Questions.Count;
         var baseValue = board.BaseValue;
 
-        var activeList = new List<bool>();
+        var activeList = new List<string>();
 
         for(var i=0; i< numCats; i++)
         {
             for(var j=0; j< numQs; j++)
             {
-                activeList.Add(!(BoardManager.Instance.Questions[i][j] is null));
+                activeList.Add((!(BoardManager.Instance.Questions[i][j] is null)).ToString());
             }
         }
-
-        var active = new BitArray(activeList.ToArray());
         ws.EmitAsync("start_game_host", GameManager.Instance.RoomCode, catArr, numCats, numQs, baseValue, activeList.ToArray());
     }
 

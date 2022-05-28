@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 
 public class BoardManager : MonoBehaviour
 {
@@ -19,6 +20,8 @@ public class BoardManager : MonoBehaviour
 
     // organized by cat, q
     List<List<GameObject>> questions;
+
+    List<GameObject> players;
 
     Transform gridTransform;
     Transform playerTransform;
@@ -51,9 +54,11 @@ public class BoardManager : MonoBehaviour
 
     public Board Board => board;
     public List<List<GameObject>> Questions => questions;
+    public List<GameObject> Players => players;
     void Start()
     {
         Instance = this;
+        players = new List<GameObject>();
         board = GameManager.Instance.ActiveGame.Boards[GameManager.Instance.BoardIndex];
         gridElementPrefab = Resources.Load<GameObject>("Prefabs/GridElement");
         questionElementPrefab = Resources.Load<GameObject>("Prefabs/QuestionElement");
@@ -62,6 +67,7 @@ public class BoardManager : MonoBehaviour
         playerTransform = gameObject.transform.Find("Players").transform;
         questions = new List<List<GameObject>>();
         InitializeBoard();
+        WSManager.Instance.ActivateQuesitonSelectMode();
 
         StartCoroutine(HandleBoard());
     }
@@ -114,11 +120,29 @@ public class BoardManager : MonoBehaviour
             var playerRect = playerObj.GetComponent<RectTransform>();
             playerRect.anchoredPosition = new Vector3(playerIndex * playerCellWidth, -(gridCellHeight*(numQs + 1)));
             playerRect.sizeDelta = new Vector2(playerCellWidth, gridCellHeight);
+            playerObj.transform.Find("Highlight").GetComponent<RectTransform>().sizeDelta = new Vector2(playerCellWidth, gridCellHeight);
             playerIndex++;
             playerObj.transform.Find("Text").GetComponent<TMPro.TextMeshProUGUI>().SetText($"{player.Name}\n${player.Money}");
+            players.Add(playerObj);
         }
 
 
+    }
+
+    public void HighlightPlayer(string name,bool highlight)
+    {
+        var playerIndex = GameManager.Instance.PlayerList.FindIndex(x => x.Name.Equals(name));
+        players[playerIndex].transform.Find("Highlight").GetComponent<Image>().enabled = highlight;
+    }
+
+    public void UpdateMoney()
+    {
+        for(var i=0; i<players.Count; i++)
+        {
+            var playerObj = players[i];
+            var player = GameManager.Instance.PlayerList[i];
+            playerObj.transform.Find("Text").GetComponent<TMPro.TextMeshProUGUI>().SetText($"{player.Name}\n${player.Money}");
+        }
     }
 
     private IEnumerator HandleQuestion(int catIndex, int qIndex)
@@ -139,9 +163,9 @@ public class BoardManager : MonoBehaviour
             qObj.transform.SetParent(gameObject.transform);
             var playerRect = qObj.GetComponent<RectTransform>();
             playerRect.anchoredPosition = new Vector3(catIndex * gridCellWidth, -(gridCellHeight * (qIndex+1)));
-            playerRect.sizeDelta = new Vector2(width, height);
+            playerRect.sizeDelta = new Vector2(width, height-gridCellHeight);
             qObj.transform.Find("Text").GetComponent<TMPro.TextMeshProUGUI>().SetText($"{question.Text}");
-            playerRect.localScale = new Vector2(1f / numCats, 1f / (numQs + 2));
+            playerRect.localScale = new Vector2(1f / numCats, 1f / (numQs + 1));
 
             var originalPos = playerRect.anchoredPosition;
             var originalScale = playerRect.localScale;
@@ -195,6 +219,7 @@ public class BoardManager : MonoBehaviour
 
                         WSManager.Instance.DisableBuzzers();
                         WSManager.Instance.ActivateDecisionMode();
+                        HighlightPlayer(buzzInName, true);
 
                         var waitingForHostDecision = true;
                         while (waitingForHostDecision)
@@ -213,6 +238,9 @@ public class BoardManager : MonoBehaviour
                                     AwardPlayer(buzzInName, -question.Value);
                                 }
                                 WSManager.Instance.SetPlayerInfo();
+                                WSManager.Instance.ActivateSpeakMode();
+                                UpdateMoney();
+                                HighlightPlayer(buzzInName, false);
                             }
                             yield return null;
                         }
@@ -231,6 +259,7 @@ public class BoardManager : MonoBehaviour
             RemoveQuestion(catIndex, qIndex);
 
             WSManager.Instance.ActivateQuesitonSelectMode();
+            WSManager.Instance.DisableBuzzers();
 
 
         }
@@ -278,7 +307,6 @@ public class BoardManager : MonoBehaviour
                     yield return HandleQuestion(gridX, gridY - 1);
                 }
             }
-            //TODO: include support for player input
             if (hostSelectFlag)
             {
                 hostSelectFlag = false;
@@ -294,6 +322,10 @@ public class BoardManager : MonoBehaviour
         if(GameManager.Instance.BoardIndex < GameManager.Instance.ActiveGame.Boards.Count)
         {
             SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+        }
+        else
+        {
+            SceneManager.LoadScene("Final");
         }
 
         yield return null;
