@@ -14,9 +14,9 @@ public struct Game
 
     public static Game GenerateTestGame()
     {
-        var numBoards = 2;
-        var numCats = 2;
-        var numQs = 2;
+        var numBoards = 1;
+        var numCats = 1;
+        var numQs = 1;
 
         var boardList = new List<Board>();
         for(var boardIndex=0; boardIndex < numBoards; boardIndex++)

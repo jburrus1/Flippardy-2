@@ -162,6 +162,35 @@ public class WSManager : MonoBehaviour
             BoardManager.Instance.HostDecision(decision);
         });
 
+        ws.On("reveal_category", data =>
+        {
+            FinalManager.Instance.RevealCategory();
+        });
+
+        ws.On("submit_bet", data =>
+        {
+            var player = data.GetValue<string>(0);
+            var bet = data.GetValue<int>(1);
+            FinalManager.Instance.SubmitBet(player,bet);
+        });
+
+        ws.On("reveal_question", data =>
+        {
+            FinalManager.Instance.RevealQuestion();
+        });
+
+        ws.On("submit_answer", data =>
+        {
+            var player = data.GetValue<string>(0);
+            var answer = data.GetValue<string>(1);
+            FinalManager.Instance.SubmitAnswer(player, answer);
+        });
+
+        ws.On("progress_showcase", data =>
+        {
+            FinalManager.Instance.ProgressShowcase();
+        });
+
 
         ws.On("start_game", action => {
             if(GameManager.Instance.PlayerList.Count > 0)
@@ -223,6 +252,26 @@ public class WSManager : MonoBehaviour
     public void ActivateDecisionMode()
     {
         ws.EmitAsync("decision_mode", GameManager.Instance.RoomCode);
+    }
+
+    public void BeginFinalFlippardy()
+    {
+        ws.EmitAsync("begin_final", GameManager.Instance.RoomCode);
+    }
+
+    public void StartBetting()
+    {
+        ws.EmitAsync("start_bet", GameManager.Instance.RoomCode);
+    }
+
+    public void AllowQuestionReveal()
+    {
+        ws.EmitAsync("allow_question_reveal", GameManager.Instance.RoomCode);
+    }
+
+    public void StartAnswer()
+    {
+        ws.EmitAsync("start_answer", GameManager.Instance.RoomCode);
     }
 
     void Update(){

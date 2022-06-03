@@ -2,9 +2,12 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 
 public class FinalManager : MonoBehaviour
 {
+    public static FinalManager Instance;
+
     GameObject welcome;
     GameObject category;
     GameObject question;
@@ -36,6 +39,7 @@ public class FinalManager : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+        Instance = this;
         var final = GameManager.Instance.ActiveGame.FinalFlippardy;
         bets = new List<int>();
         answers = new List<string>();
@@ -53,15 +57,15 @@ public class FinalManager : MonoBehaviour
         finalAnswerPrefab = Resources.Load<GameObject>("Prefabs/FinalAnswer");
 
 
-        category.transform.Find("Text").GetComponent<Text>().text = final.Category;
-        question.transform.Find("Text").GetComponent<Text>().text = final.Question;
+        category.transform.Find("Text").gameObject.GetComponent<TextMeshProUGUI>().text = final.Category;
+        question.transform.Find("Text").gameObject.GetComponent<TextMeshProUGUI>().text = final.Question;
 
         StartCoroutine(HandleFinal());
     }
 
     IEnumerator HandleFinal()
     {
-
+        WSManager.Instance.BeginFinalFlippardy();
         var waitingForCat = true;
         while (waitingForCat)
         {
@@ -73,9 +77,7 @@ public class FinalManager : MonoBehaviour
             }
             yield return null;
         }
-
-        // TODO: Remove buttons from host
-        // TODO: Give players betting capabilities
+        WSManager.Instance.StartBetting();
 
         var waitingForBets = true;
         while (waitingForBets)
@@ -96,7 +98,7 @@ public class FinalManager : MonoBehaviour
             yield return null;
         }
 
-        // TODO: Give buttons back
+        WSManager.Instance.AllowQuestionReveal();
 
         var waitingForQuestion = true;
         while (waitingForQuestion)
@@ -109,6 +111,7 @@ public class FinalManager : MonoBehaviour
             }
             yield return null;
         }
+        // TODO: I have an extra step here that I forgot. Host needs to start answers after reading question
 
         var waitingForAnswerStart = true;
         while (waitingForAnswerStart)
@@ -121,9 +124,9 @@ public class FinalManager : MonoBehaviour
             yield return null;
         }
 
-        // TODO: Give players answer capabilities
+        WSManager.Instance.StartAnswer();
 
-        yield return new WaitForSeconds(1);
+        yield return new WaitForSeconds(5);
 
         for(var i=0; i<bets.Count; i++)
         {
@@ -144,6 +147,40 @@ public class FinalManager : MonoBehaviour
         }
 
         yield return null;
+    }
+
+    public void RevealCategory()
+    {
+        revealCategoryFlag = true;
+    }
+
+    public void RevealQuestion()
+    {
+        revealQuestionFlag = true;
+    }
+
+    public void StartAnswers()
+    {
+        startAnswersFlag = true;
+    }
+
+    public void SubmitBet(string player, int bet)
+    {
+        var index = GameManager.Instance.PlayerList.FindIndex(x => x.Name.Equals(player));
+        // todo: check for legal bet
+        bets[index] = bet;
+    }
+
+    public void SubmitAnswer(string player, string answer)
+    {
+        var index = GameManager.Instance.PlayerList.FindIndex(x => x.Name.Equals(player));
+        // todo: check for legal bet
+        answers[index] = answer;
+    }
+
+    public void ProgressShowcase()
+    {
+        advanceShowcaseFlag = true;
     }
 
     // Update is called once per frame
