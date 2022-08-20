@@ -12,6 +12,9 @@ public class FinalManager : MonoBehaviour
     GameObject category;
     GameObject question;
     List<GameObject> FinalShowcaseElements;
+    List<GameObject> players;
+
+    TextMeshProUGUI timer;
 
 
     GameObject finalAnswerPrefab;
@@ -43,6 +46,7 @@ public class FinalManager : MonoBehaviour
     void Start()
     {
         Instance = this;
+        players = new List<GameObject>();
         var final = GameManager.Instance.ActiveGame.FinalFlippardy;
         bets = new List<int>();
         answers = new List<string>();
@@ -57,6 +61,8 @@ public class FinalManager : MonoBehaviour
         category = transform.Find("Category").gameObject;
         question = transform.Find("Question").gameObject;
 
+        timer = transform.Find("Timer").GetComponent<TextMeshProUGUI>();
+
         changeToMoney = 0;
         currentBet = 0;
         finalShowcase = transform.Find("FinalShowcase").gameObject;
@@ -64,6 +70,23 @@ public class FinalManager : MonoBehaviour
         finalAnswerPrefab = Resources.Load<GameObject>("Prefabs/FinalShowcaseElement");
         FinalShowcaseElements = new List<GameObject>();
 
+
+        var playerIndex = 0;
+        var gridCellHeight = 1080 / 5;
+        var playerCellWidth = 1920 / GameManager.Instance.PlayerList.Count;
+        var gridElementPrefab = Resources.Load<GameObject>("Prefabs/GridElement");
+        foreach (var player in GameManager.Instance.PlayerList)
+        {
+            var playerObj = Instantiate(gridElementPrefab);
+            var playerRect = playerObj.GetComponent<RectTransform>();
+            playerRect.SetParent(transform);
+            playerRect.anchoredPosition = new Vector3(playerIndex * playerCellWidth, -(gridCellHeight * (4)));
+            playerRect.sizeDelta = new Vector2(playerCellWidth, gridCellHeight);
+            playerObj.transform.Find("Highlight").GetComponent<RectTransform>().sizeDelta = new Vector2(playerCellWidth, gridCellHeight);
+            playerIndex++;
+            playerObj.transform.Find("Text").GetComponent<TMPro.TextMeshProUGUI>().SetText($"{player.Name}\n${player.Money}");
+            players.Add(playerObj);
+        }
 
         category.transform.Find("Text").gameObject.GetComponent<TextMeshProUGUI>().text = final.Category;
         question.transform.Find("Text").gameObject.GetComponent<TextMeshProUGUI>().text = final.Question;
@@ -135,7 +158,7 @@ public class FinalManager : MonoBehaviour
 
         WSManager.Instance.StartAnswer();
 
-        yield return new WaitForSeconds(10);
+        yield return BeginTimer(10f);
 
         for(var i=0; i<bets.Count; i++)
         {
@@ -159,6 +182,7 @@ public class FinalManager : MonoBehaviour
 
         for (var i=0; i<FinalShowcaseElements.Count; i++)
         {
+            currentBet = bets[i];
             WSManager.Instance.AllowProgress();
 
             //Show Answer
@@ -192,6 +216,7 @@ public class FinalManager : MonoBehaviour
             GameManager.Instance.PlayerList[i].AddMoney(changeToMoney);
             yield return new WaitForSeconds(1);
             WSManager.Instance.SetPlayerInfo();
+            UpdateMoney();
 
             advanceShowcaseFlag = false;
 
@@ -302,6 +327,32 @@ public class FinalManager : MonoBehaviour
         }
         imageObj.color = new Color(imageColor.r, imageColor.g, imageColor.b, 0);
         textObj.color = new Color(textColor.r, textColor.g, textColor.b, 0);
+    }
+
+    private IEnumerator BeginTimer(float timeInSeconds)
+    {
+        var timeRemaining = timeInSeconds;
+
+        timer.text = Mathf.RoundToInt(timeInSeconds).ToString();
+
+        while (timeRemaining > 0)
+        {
+            timeRemaining -= Time.deltaTime;
+            timer.text = Mathf.RoundToInt(timeRemaining).ToString();
+            yield return null;
+        }
+
+        timer.text = "";
+    }
+
+    public void UpdateMoney()
+    {
+        for (var i = 0; i < players.Count; i++)
+        {
+            var playerObj = players[i];
+            var player = GameManager.Instance.PlayerList[i];
+            playerObj.transform.Find("Text").GetComponent<TMPro.TextMeshProUGUI>().SetText($"{player.Name}\n${player.Money}");
+        }
     }
 
     // Update is called once per frame

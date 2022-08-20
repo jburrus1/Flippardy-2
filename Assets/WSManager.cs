@@ -198,12 +198,12 @@ public class WSManager : MonoBehaviour
 
         ws.On("progress_showcase_correct", data =>
         {
-            FinalManager.Instance.ProgressShowcase();
+            FinalManager.Instance.ProgressShowcase_Correct();
         });
 
         ws.On("progress_showcase_incorrect", data =>
         {
-            FinalManager.Instance.ProgressShowcase();
+            FinalManager.Instance.ProgressShowcase_Incorrect();
         });
 
 
