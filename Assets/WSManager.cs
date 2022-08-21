@@ -179,6 +179,11 @@ public class WSManager : MonoBehaviour
             FinalManager.Instance.RevealQuestion();
         });
 
+        ws.On("start_answers", data =>
+        {
+            FinalManager.Instance.StartAnswers();
+        });
+
         ws.On("submit_answer", data =>
         {
             var player = data.GetValue<string>(0);
@@ -187,6 +192,16 @@ public class WSManager : MonoBehaviour
         });
 
         ws.On("progress_showcase", data =>
+        {
+            FinalManager.Instance.ProgressShowcase();
+        });
+
+        ws.On("progress_showcase_correct", data =>
+        {
+            FinalManager.Instance.ProgressShowcase();
+        });
+
+        ws.On("progress_showcase_incorrect", data =>
         {
             FinalManager.Instance.ProgressShowcase();
         });
@@ -269,9 +284,27 @@ public class WSManager : MonoBehaviour
         ws.EmitAsync("allow_question_reveal", GameManager.Instance.RoomCode);
     }
 
+    public void AllowAnswerStart()
+    {
+        ws.EmitAsync("allow_answer_start", GameManager.Instance.RoomCode);
+    }
+
     public void StartAnswer()
     {
         ws.EmitAsync("start_answer", GameManager.Instance.RoomCode);
+    }
+
+    public void AllowProgress()
+    {
+        ws.EmitAsync("allow_progress", GameManager.Instance.RoomCode);
+    }
+    public void StopProgress()
+    {
+        ws.EmitAsync("stop_progress", GameManager.Instance.RoomCode);
+    }
+    public void AllowProgressDecision()
+    {
+        ws.EmitAsync("allow_progress_decision", GameManager.Instance.RoomCode);
     }
 
     void Update(){

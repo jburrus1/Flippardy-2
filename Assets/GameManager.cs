@@ -158,4 +158,18 @@ public class GameManager : MonoBehaviour
     {
         startGameFlag = true;
     }
+
+    public PlayerInfo GetWinner()
+    {
+        var maxMoney = int.MinValue;
+        var winner = PlayerList[0];
+        foreach(var player in PlayerList)
+        {
+            if(player.Money > maxMoney)
+            {
+                winner = player;
+            }
+        }
+        return winner;
+    }
 }
