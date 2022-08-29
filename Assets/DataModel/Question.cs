@@ -4,6 +4,6 @@ using UnityEngine;
 
 public struct Question
 {
-    public int Value;
+    public int Index;
     public string Text;
 }

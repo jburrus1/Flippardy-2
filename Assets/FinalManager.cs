@@ -158,7 +158,7 @@ public class FinalManager : MonoBehaviour
 
         WSManager.Instance.StartAnswer();
 
-        yield return BeginTimer(10f);
+        yield return BeginTimer(60f);
 
         for(var i=0; i<bets.Count; i++)
         {
@@ -253,9 +253,11 @@ public class FinalManager : MonoBehaviour
     public void SubmitBet(string player, int bet)
     {
         var index = GameManager.Instance.PlayerList.FindIndex(x => x.Name.Equals(player));
-        // todo: check for legal bet
+        // todo: feedback for legal bet
 
-        if(bet <= GameManager.Instance.PlayerList[index].Money)
+        var negativeAndZero = (GameManager.Instance.PlayerList[index].Money < 0) && (bet == 0);
+
+        if (((bet <= GameManager.Instance.PlayerList[index].Money) && (bet >= 0)) || negativeAndZero)
         {
             bets[index] = bet;
         }

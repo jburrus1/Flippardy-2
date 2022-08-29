@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Newtonsoft.Json;
 
 public struct Game
 {
@@ -29,8 +30,8 @@ public struct Game
                 {
                     qList.Add(new Question
                     {
-                        Value = (qIndex + 1) * 200 * (boardIndex + 1),
-                        Text = $"Board {boardIndex+1} Cat {catIndex+1} Question {qIndex + 1}"
+                        Text = $"Board {boardIndex+1} Cat {catIndex+1} Q {qIndex + 1}",
+                        Index = qIndex +1
                     });
                 }
                 catList.Add(new Category { Name = $"Board {boardIndex + 1} Cat {catIndex + 1}", Questions = qList });
@@ -38,6 +39,6 @@ public struct Game
             boardList.Add(new Board { Categories = catList, BaseValue = 200*(boardIndex+1)});
         }
 
-        return new Game { Boards = boardList, FinalFlippardy = ("Final Cat", "Final Q") };
+        return new Game { Boards = boardList, FinalFlippardy = ("Final Category", "Final Question") };
     }
 }

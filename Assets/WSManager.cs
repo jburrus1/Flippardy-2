@@ -10,8 +10,10 @@ using System.Linq;
 
 public class WSManager : MonoBehaviour
 {
+    public float buzzCollectTime;
     public static WSManager Instance;
 
+    private bool gameStarted = false;
     SocketIO ws;
     TextMeshProUGUI testText;
     TextMeshProUGUI playerListUI;
@@ -23,6 +25,11 @@ public class WSManager : MonoBehaviour
 
     bool updatePlayerListFlag = false;
     bool updateHostFlag = false;
+
+    private bool collectBuzzes = true;
+    private bool collectingBuzzes = false;
+
+    private Dictionary<string, int> buzzDelay;
     // Start is called before the first frame update
     private void Start()
     {
@@ -95,7 +102,16 @@ public class WSManager : MonoBehaviour
             Debug.Log(data);
             var client_name = data.GetValue<string>(0);
             var room_code = data.GetValue<string>(1);
-            if (GameManager.Instance.AddPlayer(client_name))
+            if (gameStarted)
+            {
+                var matchingPlayers = GameManager.Instance.PlayerList.Where(x => x.Name.Equals(client_name)).ToList();
+                if (matchingPlayers.Count == 1)
+                {
+                    ws.EmitAsync("start_game_player", GameManager.Instance.RoomCode, matchingPlayers[0].Name, matchingPlayers[0].Money.ToString());
+                    ws.EmitAsync("set_player_info", GameManager.Instance.RoomCode, matchingPlayers[0].Name, matchingPlayers[0].Money, matchingPlayers[0].CanAnswer);
+                }
+            }
+            else if (GameManager.Instance.AddPlayer(client_name))
             {
                 playerListString += $"{client_name}\n";
                 updatePlayerListFlag = true;
@@ -151,6 +167,15 @@ public class WSManager : MonoBehaviour
         ws.On("buzz_in", data =>
         {
             var playerName = data.GetValue<string>(0);
+            var delay = data.GetValue<int>(0);
+
+            if (collectBuzzes) {
+                buzzDelay.Add(playerName, delay);
+                if (!collectingBuzzes)
+                {
+                    StartCoroutine(CollectBuzzes());
+                }
+            }
             Debug.Log($"{playerName} buzzed in");
             BoardManager.Instance.BuzzIn(playerName);
         });
@@ -210,12 +235,15 @@ public class WSManager : MonoBehaviour
         ws.On("start_game", action => {
             if(GameManager.Instance.PlayerList.Count > 0)
             {
+                Debug.Log("Starting for players");
                 foreach(var player in GameManager.Instance.PlayerList)
                 {
                     ws.EmitAsync("start_game_player", GameManager.Instance.RoomCode,player.Name, player.Money.ToString());
                 }
-                var startBoard = GameManager.Instance.ActiveGame.Boards[0];
+
+                gameStarted = true;
                 GameManager.Instance.StartGame();
+                var startBoard = GameManager.Instance.ActiveGame.Boards[0];
             }
         });
         await ws.ConnectAsync();
@@ -229,6 +257,7 @@ public class WSManager : MonoBehaviour
             Debug.Log($"{player.Name}, {player.Money}, {player.CanAnswer}");
             ws.EmitAsync("set_player_info", GameManager.Instance.RoomCode, player.Name, player.Money, player.CanAnswer);
         }
+        collectBuzzes = true;
     }
 
     public void DisableBuzzers()
@@ -319,6 +348,21 @@ public class WSManager : MonoBehaviour
             updateHostFlag = false;
             hostNameUI.SetText("Hosted by " + GameManager.Instance.Host) ;
         }
+    }
+
+    private IEnumerator CollectBuzzes()
+    {
+        collectingBuzzes = true;
+        var time = 0f;
+        while(time < buzzCollectTime)
+        {
+            time += Time.deltaTime;
+            yield return null;
+        }
+
+        collectingBuzzes = false;
+        collectBuzzes = false;
+        yield return null;
     }
 
 }

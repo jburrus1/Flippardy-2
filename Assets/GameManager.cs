@@ -58,7 +58,6 @@ public class GameManager : MonoBehaviour
     {
         Instance = this;
         DontDestroyOnLoad(this.gameObject);
-        activeGame = Game.GenerateTestGame();
         playerList = new List<PlayerInfo>();
     }
 
@@ -97,7 +96,8 @@ public class GameManager : MonoBehaviour
         }
         else
         {
-            // Setup for player control
+            var json = File.ReadAllText("C:\\Temp\\Foo.json");
+            activeGame = JsonConvert.DeserializeObject<Game>(json);
         }
         initialized = true;
         SceneManager.LoadScene("Board");
@@ -157,6 +157,7 @@ public class GameManager : MonoBehaviour
     public void StartGame()
     {
         startGameFlag = true;
+        Debug.Log("Starting game");
     }
 
     public PlayerInfo GetWinner()
@@ -167,6 +168,7 @@ public class GameManager : MonoBehaviour
         {
             if(player.Money > maxMoney)
             {
+                maxMoney = player.Money;
                 winner = player;
             }
         }

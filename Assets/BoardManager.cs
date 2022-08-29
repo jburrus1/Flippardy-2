@@ -4,10 +4,13 @@ using UnityEngine;
 using System.Linq;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using System.Threading;
 
 public class BoardManager : MonoBehaviour
 {
     public static BoardManager Instance;
+
+    bool allowBuzz = false;
 
     const float width = 1920;
     const float height = 1080;
@@ -106,7 +109,7 @@ public class BoardManager : MonoBehaviour
                 qRect.anchoredPosition = new Vector3(catIndex * gridCellWidth, -(gridCellHeight * (qIndex+1)));
                 qRect.sizeDelta = new Vector2(gridCellWidth, gridCellHeight);
                 qIndex++;
-                qObj.transform.Find("Text").GetComponent<TMPro.TextMeshProUGUI>().SetText($"${question.Value}");
+                qObj.transform.Find("Text").GetComponent<TMPro.TextMeshProUGUI>().SetText($"${board.BaseValue * qIndex}");
                 questions.Last().Add(qObj);
             }
             catIndex++;
@@ -208,42 +211,53 @@ public class BoardManager : MonoBehaviour
                 yield return null;
             }
 
+            allowBuzz = true;
+
             if (!GameManager.Instance.DebugMode)
             {
+                buzzInName = "";
                 var waitingForPlayers = true;
+                buzzInFlag = false;
                 while (waitingForPlayers)
                 {
                     if (buzzInFlag)
                     {
-                        buzzInFlag = false;
-
-                        WSManager.Instance.DisableBuzzers();
-                        WSManager.Instance.ActivateDecisionMode();
-                        HighlightPlayer(buzzInName, true);
-
-                        var waitingForHostDecision = true;
-                        while (waitingForHostDecision)
+                        allowBuzz = false;
+                        if(buzzInName.Length == 0)
                         {
-                            if (hostDecisionFlag)
-                            {
-                                hostDecisionFlag = false;
-                                waitingForHostDecision = false;
-                                if (hostDecision)
-                                {
-                                    AwardPlayer(buzzInName, question.Value);
-                                    waitingForPlayers = false;
-                                }
-                                else
-                                {
-                                    AwardPlayer(buzzInName, -question.Value);
-                                }
-                                WSManager.Instance.SetPlayerInfo();
-                                WSManager.Instance.ActivateSpeakMode();
-                                UpdateMoney();
-                                HighlightPlayer(buzzInName, false);
-                            }
-                            yield return null;
+                            buzzInFlag = false;
                         }
+                        else
+                        {
+                            buzzInFlag = false;
+                            WSManager.Instance.ActivateDecisionMode();
+                            HighlightPlayer(buzzInName, true);
+
+                            var waitingForHostDecision = true;
+                            while (waitingForHostDecision)
+                            {
+                                if (hostDecisionFlag)
+                                {
+                                    hostDecisionFlag = false;
+                                    waitingForHostDecision = false;
+                                    if (hostDecision)
+                                    {
+                                        AwardPlayer(buzzInName, question.Index * board.BaseValue);
+                                        waitingForPlayers = false;
+                                    }
+                                    else
+                                    {
+                                        AwardPlayer(buzzInName, -question.Index * board.BaseValue);
+                                    }
+                                    WSManager.Instance.SetPlayerInfo();
+                                    WSManager.Instance.ActivateSpeakMode();
+                                    UpdateMoney();
+                                    HighlightPlayer(buzzInName, false);
+                                }
+                                yield return null;
+                            }
+                        }
+                        allowBuzz = true;
                     }
                     if (hostCancelQFlag)
                     {
@@ -253,6 +267,11 @@ public class BoardManager : MonoBehaviour
 
                     yield return null;
                 }
+            }
+
+            foreach(var player in GameManager.Instance.PlayerList)
+            {
+                HighlightPlayer(player.Name, false);
             }
 
 
@@ -351,10 +370,21 @@ public class BoardManager : MonoBehaviour
 
     public void BuzzIn(string playerName)
     {
-        lock (buzzInLock)
+        if (allowBuzz)
         {
-            buzzInFlag = true;
-            buzzInName = playerName;
+            if (Monitor.TryEnter(buzzInLock))
+            {
+                try
+                {
+                    WSManager.Instance.DisableBuzzers();
+                    buzzInFlag = true;
+                    buzzInName = playerName;
+                }
+                finally
+                {
+                    Monitor.Exit(buzzInLock);
+                }
+            }
         }
     }
 
