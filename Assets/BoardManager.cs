@@ -12,8 +12,8 @@ public class BoardManager : MonoBehaviour
 
     bool allowBuzz = false;
 
-    const float width = 1920;
-    const float height = 1080;
+    float width = 1920;
+    float height = 1080;
 
     int numCats;
     int numQs;
@@ -69,9 +69,11 @@ public class BoardManager : MonoBehaviour
         gridTransform = gameObject.transform.Find("Grid").transform;
         playerTransform = gameObject.transform.Find("Players").transform;
         questions = new List<List<GameObject>>();
-        InitializeBoard();
+        InitializeBoard(); 
         WSManager.Instance.ActivateQuesitonSelectMode();
-
+        var scaler = transform.parent.GetComponent<CanvasScaler>();
+        width = scaler.referenceResolution.x;
+        height = scaler.referenceResolution.y;
         StartCoroutine(HandleBoard());
     }
 
@@ -100,6 +102,7 @@ public class BoardManager : MonoBehaviour
             catRect.anchoredPosition = new Vector3(catIndex * gridCellWidth, 0);
             catRect.sizeDelta = new Vector2(gridCellWidth, gridCellHeight);
             catObj.transform.Find("Text").GetComponent<TMPro.TextMeshProUGUI>().SetText(category.Name);
+            catRect.localScale = Vector3.one;
             questions.Add(new List<GameObject>());
             foreach(var question in category.Questions)
             {
@@ -109,7 +112,10 @@ public class BoardManager : MonoBehaviour
                 qRect.anchoredPosition = new Vector3(catIndex * gridCellWidth, -(gridCellHeight * (qIndex+1)));
                 qRect.sizeDelta = new Vector2(gridCellWidth, gridCellHeight);
                 qIndex++;
-                qObj.transform.Find("Text").GetComponent<TMPro.TextMeshProUGUI>().SetText($"${board.BaseValue * qIndex}");
+                var tmpro = qObj.transform.Find("Text").GetComponent<TMPro.TextMeshProUGUI>();
+                tmpro.SetText($"${board.BaseValue * qIndex}");
+                tmpro.color = new Color(0.8f, 0.7f, 0);
+                qRect.localScale = Vector3.one;
                 questions.Last().Add(qObj);
             }
             catIndex++;
@@ -121,6 +127,7 @@ public class BoardManager : MonoBehaviour
             var playerObj = Instantiate(gridElementPrefab);
             playerObj.transform.SetParent(gridTransform);
             var playerRect = playerObj.GetComponent<RectTransform>();
+            playerRect.localScale = Vector3.one;
             playerRect.anchoredPosition = new Vector3(playerIndex * playerCellWidth, -(gridCellHeight*(numQs + 1)));
             playerRect.sizeDelta = new Vector2(playerCellWidth, gridCellHeight);
             playerObj.transform.Find("Highlight").GetComponent<RectTransform>().sizeDelta = new Vector2(playerCellWidth, gridCellHeight);

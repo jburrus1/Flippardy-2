@@ -167,15 +167,6 @@ public class WSManager : MonoBehaviour
         ws.On("buzz_in", data =>
         {
             var playerName = data.GetValue<string>(0);
-            var delay = data.GetValue<int>(0);
-
-            if (collectBuzzes) {
-                buzzDelay.Add(playerName, delay);
-                if (!collectingBuzzes)
-                {
-                    StartCoroutine(CollectBuzzes());
-                }
-            }
             Debug.Log($"{playerName} buzzed in");
             BoardManager.Instance.BuzzIn(playerName);
         });
